@@ -113,6 +113,7 @@ public class AccountController {
 				HttpStatus status = HttpStatus.resolve(Integer.parseInt(paymentData.getPayload().getStatus()));
 				paymentData.getPayload().setStatus(null);
 				
+				
 				responseEntity = new ResponseEntity<>(errorList, HttpStatus.INTERNAL_SERVER_ERROR);
 			}
 			
