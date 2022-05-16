@@ -24,11 +24,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.omicron.fabrik.demo.account.domain.client.Account;
 import com.omicron.fabrik.demo.account.domain.client.Creditor;
 import com.omicron.fabrik.demo.account.domain.client.PaymentRequest;
+import com.omicron.fabrik.demo.account.domain.client.response.Error;
 import com.omicron.fabrik.demo.account.dto.BalanceDtoOut;
 import com.omicron.fabrik.demo.account.dto.PaymentDtoOut;
 import com.omicron.fabrik.demo.account.dto.TransactionsDtoOut;
-import com.omicron.fabrik.demo.account.service.AccountService;
-import com.omicron.fabrik.demo.account.domain.client.response.Error;
+import com.omicron.fabrik.demo.account.utilities.Utilities;
 
 @SpringBootTest
 @WebAppConfiguration
@@ -39,23 +39,11 @@ class AccountApplicationTests {
 	private final String transactionsUrl = "/transactions";
 	private final String paymentUrl = "/payment";
 	
-	private final String BALANCE_KO_DESC = "Invalid account identifier";
-	private final String BALANCE_KO_CODE = "REQ004";
-	
-	private final String TRANSACTION_KO_DESC = "Invalid date format";
-	private final String TRANSACTION_KO_CODE = "REQ017";
-	
-	private final String PAYMENT_KO_DESC = "L'importo dell'operazione deve essere maggiore di 0.01 EUR e minore di 999999999999.00 EUR.";
-	private final String PAYMENT_KO_CODE = "API000";
-	
     protected MockMvc mvc;
     
     @Autowired
     WebApplicationContext webApplicationContext;
     	
-	@Autowired
-	private AccountService accountService;
-	
     //SYSTEM TESTS
 	@Test
 	public void balance() throws Exception {
@@ -93,7 +81,7 @@ class AccountApplicationTests {
 		List<Error> errorList = mapFromJson(content, new TypeReference<List<Error>>(){});
 		
 		//Per un id non valido, mi aspetto il seguente errore nella lista della response
-		Error expectedError = new Error(BALANCE_KO_CODE, BALANCE_KO_DESC, null);
+		Error expectedError = new Error(Utilities.BALANCE_KO_CODE, Utilities.BALANCE_KO_DESC, null);
 		
 		assertTrue(errorList.contains(expectedError));
 	}
@@ -117,10 +105,8 @@ class AccountApplicationTests {
 		
 		String content = mvcResult.getResponse().getContentAsString();
 		TransactionsDtoOut response = mapFromJson(content, TransactionsDtoOut.class);
-//		TransactionsResponse response = mapFromJson(content, TransactionsResponse.class);
 				
 		assertTrue(response.getTransactions() != null);
-//		assertTrue(response.getPayload().getList().size() > 0);
 	}
 	
 	@Test
@@ -144,11 +130,12 @@ class AccountApplicationTests {
 		List<Error> errorList = mapFromJson(content, new TypeReference<List<Error>>(){});
 		
 		//Per data minima maggiore di data massima mi aspetto il seguente errore nella lista della response
-		Error expectedError = new Error(TRANSACTION_KO_CODE, TRANSACTION_KO_DESC, null);
+		Error expectedError = new Error(Utilities.TRANSACTION_KO_CODE, Utilities.TRANSACTION_KO_DESC, null);
 				
 		assertTrue(errorList.contains(expectedError));
 	}
 	
+	//Test per previsione del caso in cui il bonifico risponda con un OK invece di sempre KO
 	@Test 
 	public void payment() throws Exception {
 		setUp();
@@ -192,37 +179,16 @@ class AccountApplicationTests {
 				.accept(MediaType.APPLICATION_JSON_VALUE)).andReturn();
 		int status = mvcResult.getResponse().getStatus();
 	
-		assertTrue(status == 200);
+		assertTrue(status == 400);
 		
 		String content = mvcResult.getResponse().getContentAsString();
 		List<Error> errorList = mapFromJson(content, new TypeReference<List<Error>>(){});
 		
-		//Per importo == 0.00  mi aspetto il seguente errore nella lista della response
-		Error expectedError = new Error(PAYMENT_KO_CODE, PAYMENT_KO_DESC, null);
+		Error expectedError = new Error(Utilities.PAYMENT_BR_KO_CODE, Utilities.PAYMENT_BR_KO_DESC, null);
 		
 		assertTrue(errorList.contains(expectedError));
 
 	}
-	//UNIT TEST
-	@Test
-	public void balanceUnit() throws Exception {
-		setUp();
-		Long accountId = 14537780L;
-		accountService.retrieveBalance(accountId);
-		String accountIdReqParam = "accountId="+accountId;
-		String queryString = baseRestUrl + balanceUrl + "?" +accountIdReqParam;
-		MvcResult mvcResult = mvc.perform(MockMvcRequestBuilders.get(queryString)
-				.accept(MediaType.APPLICATION_JSON_VALUE)).andReturn();
-		int status = mvcResult.getResponse().getStatus();
-		
-		assertTrue(status == 200);
-		
-		String content = mvcResult.getResponse().getContentAsString();
-		BalanceDtoOut response = mapFromJson(content, BalanceDtoOut.class);
-
-		assertTrue(response.getBalance() != null);
-	}
-	
 	
      private void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
@@ -246,7 +212,7 @@ class AccountApplicationTests {
     	 return objectMapper.readValue(json, typeRef);
      }
      
-     private PaymentRequest setUpMockPaymentObj(Double amountForTest) {
+     private PaymentRequest setUpMockPaymentObj(Double amount) {
  		PaymentRequest request = new PaymentRequest();
 		
  		request.setCreditor(new Creditor());
@@ -256,7 +222,7 @@ class AccountApplicationTests {
  		
  		request.setExecutionDate("2022-05-12");
  		request.setDescription("Donazione");
- 		request.setAmount(amountForTest);//In base al valore posso ottenere una response diversa (400 per valore = 0.00)
+ 		request.setAmount(amount);//In base al valore posso ottenere una response diversa (400 per valore = 0.00)
  		request.setCurrency("EUR");
  		request.setIsInstant(false);
  		request.setIsUrgent(false);

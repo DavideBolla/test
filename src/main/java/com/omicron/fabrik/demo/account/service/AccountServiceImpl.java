@@ -1,9 +1,7 @@
 package com.omicron.fabrik.demo.account.service;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,11 +18,9 @@ import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.omicron.fabrik.demo.account.domain.client.PaymentRequest;
 import com.omicron.fabrik.demo.account.domain.client.TransactionsRequest;
 import com.omicron.fabrik.demo.account.domain.client.response.BalanceResponse;
-import com.omicron.fabrik.demo.account.domain.client.response.Error;
 import com.omicron.fabrik.demo.account.domain.client.response.PaymentResponse;
 import com.omicron.fabrik.demo.account.domain.client.response.TransactionsResponse;
 
@@ -129,10 +125,10 @@ public class AccountServiceImpl implements AccountService {
 		
 		}catch(HttpClientErrorException e) {
 			log.error(e.getMessage());
-			return PaymentResponse.handlePaymentError(e.getResponseBodyAsString(), String.valueOf(e.getRawStatusCode()));
+			return PaymentResponse.handlePaymentError(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value()));
 		}catch(HttpServerErrorException e) {
 			log.error(e.getMessage());
-			return PaymentResponse.handlePaymentError(e.getResponseBodyAsString(), String.valueOf(e.getRawStatusCode()));
+			return PaymentResponse.handlePaymentError(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value()));
 		}catch(Exception e) {
 			log.error(e.getMessage());
 			return PaymentResponse.handlePaymentError(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value()));

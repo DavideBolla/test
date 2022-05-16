@@ -1,5 +1,6 @@
 package com.omicron.fabrik.demo.account.controller;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -17,13 +18,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.omicron.fabrik.demo.account.domain.client.PaymentRequest;
 import com.omicron.fabrik.demo.account.domain.client.TransactionsRequest;
 import com.omicron.fabrik.demo.account.domain.client.response.BalanceResponse;
+import com.omicron.fabrik.demo.account.domain.client.response.Error;
 import com.omicron.fabrik.demo.account.domain.client.response.PaymentResponse;
 import com.omicron.fabrik.demo.account.domain.client.response.TransactionsResponse;
 import com.omicron.fabrik.demo.account.dto.BalanceDtoOut;
 import com.omicron.fabrik.demo.account.dto.PaymentDtoOut;
 import com.omicron.fabrik.demo.account.dto.TransactionsDtoOut;
 import com.omicron.fabrik.demo.account.service.AccountService;
-import com.omicron.fabrik.demo.account.domain.client.response.Error;
+import com.omicron.fabrik.demo.account.utilities.Utilities;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -44,14 +47,10 @@ public class AccountController {
 			BalanceDtoOut balanceOut = new BalanceDtoOut();
 			balanceOut.setBalance(balanceData.getPayload().getAvailableBalance());
 			if("OK".equalsIgnoreCase(balanceData.getStatus())) {
-//				responseEntity = new ResponseEntity<>(balanceData, HttpStatus.OK);
 				responseEntity = new ResponseEntity<>(balanceOut, HttpStatus.OK);
 			}else{
 				List<Error> errorList = balanceData.getErrors();
 				HttpStatus status = HttpStatus.resolve(Integer.parseInt(balanceData.getPayload().getStatus()));
-			
-				balanceData.getPayload().setStatus(null);
-//				responseEntity = new ResponseEntity<>(balanceData, status);
 				responseEntity = new ResponseEntity<>(errorList, status);
 			}
 		} catch (JsonProcessingException e) {
@@ -76,15 +75,10 @@ public class AccountController {
 			TransactionsDtoOut transOut = new TransactionsDtoOut();
 			transOut.setTransactions(transData.getPayload().getList());
 			if("OK".equalsIgnoreCase(transData.getStatus())) {
-//				responseEntity = new ResponseEntity<>(transData, HttpStatus.OK);
 				responseEntity = new ResponseEntity<>(transOut, HttpStatus.OK);
 			}else{
 				List<Error> errorList = transData.getErrors();				
 				HttpStatus status = HttpStatus.resolve(Integer.parseInt(transData.getPayload().getStatus()));
-
-				transData.getPayload().setStatus(null);
-				
-//				responseEntity = new ResponseEntity<>(transData, status);
 				responseEntity = new ResponseEntity<>(errorList, status);
 			}
 		} catch (JsonProcessingException e) {
@@ -102,19 +96,19 @@ public class AccountController {
 		ResponseEntity<?> responseEntity = null;
 
 		try {
-//			PaymentRequest req = new PaymentRequest();
-			PaymentResponse paymentData = accountService.performPayment(request, accountId);
-			PaymentDtoOut paymentOut = new PaymentDtoOut();
-			paymentOut.setStatus(paymentData.getStatus());
-			if("OK".equalsIgnoreCase(paymentData.getStatus())) {
-				responseEntity = new ResponseEntity<>(paymentOut, HttpStatus.OK);
-			}else{
-				List<Error> errorList = paymentData.getErrors();
-				HttpStatus status = HttpStatus.resolve(Integer.parseInt(paymentData.getPayload().getStatus()));
-				paymentData.getPayload().setStatus(null);
-				
-				
-				responseEntity = new ResponseEntity<>(errorList, HttpStatus.INTERNAL_SERVER_ERROR);
+			if(request.getAmount() >= 0.01 && request.getAmount() <= 999999999999.00) {
+				PaymentResponse paymentData = accountService.performPayment(request, accountId);
+				PaymentDtoOut paymentOut = new PaymentDtoOut();
+				paymentOut.setStatus(paymentData.getStatus());
+				if("OK".equalsIgnoreCase(paymentData.getStatus())) {
+					responseEntity = new ResponseEntity<>(paymentOut, HttpStatus.OK);
+				}else{
+					List<Error> errorList = Utilities.createCustomErrorList(new String[] {Utilities.PAYMENT_KO_DESC+accountId}, new ArrayList<Error>(), Utilities.PAYMENT_KO_CODE);
+					responseEntity = new ResponseEntity<>(errorList, HttpStatus.INTERNAL_SERVER_ERROR);
+				}
+			}else {
+				List<Error> errorList = Utilities.createCustomErrorList(new String[] {Utilities.PAYMENT_BR_KO_DESC}, new ArrayList<Error>(), Utilities.PAYMENT_BR_KO_CODE);
+				return new ResponseEntity<>(errorList, HttpStatus.BAD_REQUEST);
 			}
 			
 		} catch (JsonProcessingException e) {
